@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sniffile — local file search</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <h1>sniffile</h1>
+      <span class="sub">local file search</span>
+    </div>
+    <div class="meta">
+      <span id="ollama" class="pill" hidden></span>
+      <span id="total" class="muted">—</span>
+      <button id="help-btn" class="icon" title="about and shortcuts (?)" aria-label="help">?</button>
+    </div>
+  </header>
+
+  <nav id="roots" class="roots" aria-label="folders"></nav>
+
+  <div class="searchbox">
+    <span class="caret" aria-hidden="true">&gt;</span>
+    <input id="q" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+           placeholder="фотка с красивым мопсом" aria-label="search query">
+    <button id="clear" class="clear" title="clear (esc)" aria-label="clear">clear</button>
+  </div>
+
+  <div id="filters" class="filters" aria-label="file kinds"></div>
+
+  <section id="results" class="results" aria-live="polite"></section>
+
+  <footer class="bottom">
+    <span id="log" class="log">ready.</span>
+    <div class="actions">
+      <label id="enrich-wrap" class="check" hidden>
+        <input id="enrich" type="checkbox"> describe photos
+      </label>
+      <button id="stop" class="btn" hidden>stop</button>
+      <button id="reindex" class="btn">reindex</button>
+    </div>
+  </footer>
+
+</div>
+
+<!-- folder picker ------------------------------------------------------- -->
+<div id="picker" class="overlay" hidden>
+  <div class="modal" role="dialog" aria-label="add a folder">
+    <header class="modal-top">
+      <strong>add a folder</strong>
+      <button id="pick-close" class="icon" aria-label="close">×</button>
+    </header>
+    <div class="pathrow">
+      <button id="up" class="btn tiny" title="parent folder">↑</button>
+      <input id="pick-path" type="text" spellcheck="false" aria-label="folder path">
+      <button id="pick-go" class="btn tiny">go</button>
+    </div>
+    <div id="dirs" class="dirs"></div>
+    <footer class="modal-bottom">
+      <span id="pick-hint" class="muted">pick a folder to index</span>
+      <button id="pick-use" class="btn primary">use this folder</button>
+    </footer>
+  </div>
+</div>
+
+<!-- image preview ------------------------------------------------------- -->
+<div id="lightbox" class="lightbox" hidden>
+  <button id="lb-close" class="icon lb-close" aria-label="close">×</button>
+  <img id="lb-img" alt="">
+  <div id="lb-cap" class="lb-cap"></div>
+</div>
+
+<!-- help ---------------------------------------------------------------- -->
+<aside id="help" class="help" hidden>
+  <header class="modal-top">
+    <strong>about sniffile</strong>
+    <button id="help-close" class="icon" aria-label="close">×</button>
+  </header>
+  <p>
+    A local file search. It indexes names, paths, dates and the text inside
+    plain-text files. Optional: point it at a local <code>ollama</code> and it
+    also reads photo contents and translates queries into English keywords.
+  </p>
+  <p>
+    Nothing leaves the machine. No accounts, no telemetry, no cloud, no
+    "sign in to search your own disk".
+  </p>
+  <h2>shortcuts</h2>
+  <dl class="keys">
+    <dt><kbd>/</kbd></dt><dd>focus the search box</dd>
+    <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>move through results</dd>
+    <dt><kbd>enter</kbd></dt><dd>open the highlighted file</dd>
+    <dt><kbd>o</kbd> / <kbd>r</kbd></dt><dd>open / reveal in folder</dd>
+    <dt><kbd>esc</kbd></dt><dd>close whatever is open</dd>
+  </dl>
+  <h2>honest limits</h2>
+  <ul>
+    <li>Keyword matching, not vector embeddings. A photo is only findable by
+      name or caption.</li>
+    <li>EXIF orientation is ignored; some phone photos may look sideways in
+      the preview.</li>
+    <li>Only plain text is read for content, not PDF/DOCX.</li>
+    <li>Hidden folders and <code>node_modules</code>-style junk are skipped.</li>
+  </ul>
+  <p class="muted small">MIT licence. Built because Spotlight/Everything felt
+    wrong on this machine.</p>
+</aside>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

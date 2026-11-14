@@ -1,0 +1,24 @@
+# binaries
+/bin/
+/dist/
+/sniffile
+/sniffile.exe
+
+# test output
+*.test
+coverage.out
+coverage.html
+
+# editors
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# local data if someone runs with -data .
+/.sniffile-data/
