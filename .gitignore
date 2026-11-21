@@ -22,3 +22,15 @@ desktop.ini
 
 # local data if someone runs with -data .
 /.sniffile-data/
+
+# distro packaging leftovers
+*.pkg.tar.zst
+*.deb
+*.rpm
+*.apk
+/debian/.debhelper/
+/debian/files
+/debian/sniffile/
+/debian/debhelper-build-stamp
+/debian/*.substvars
+/obj-x86_64-linux-gnu/

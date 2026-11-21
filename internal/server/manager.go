@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kopeyka/sniffile/internal/config"
-	"github.com/kopeyka/sniffile/internal/enrich"
-	"github.com/kopeyka/sniffile/internal/index"
-	"github.com/kopeyka/sniffile/internal/search"
+	"github.com/openastolfo-boop/sniffile/internal/config"
+	"github.com/openastolfo-boop/sniffile/internal/enrich"
+	"github.com/openastolfo-boop/sniffile/internal/index"
+	"github.com/openastolfo-boop/sniffile/internal/search"
 )
 
 // Job is the scan/describe progress that the UI polls twice a second.
@@ -94,10 +94,36 @@ func NewManager(version, dataDir, cfgPath string, cfg *config.Config) *Manager {
 		job:      Job{Phase: "idle"},
 		enrich:   enrich.New(cfg.OllamaURL),
 	}
+	// Load roots in parallel: one slow network mount must not delay the window.
+	var loadMu sync.Mutex
+	var loadWG sync.WaitGroup
 	for _, r := range cfg.Roots {
-		if idx, err := index.Load(m.indexDir, r.Path); err == nil {
-			m.indexes[r.Path] = idx
+		loadWG.Add(1)
+		go func(path string) {
+			defer loadWG.Done()
+			idx, err := index.Load(m.indexDir, path)
+			if err != nil {
+				return
+			}
+			loadMu.Lock()
+			m.indexes[path] = idx
+			loadMu.Unlock()
+		}(r.Path)
+	}
+	loadWG.Wait()
+
+	// Warm the in-memory inverted indexes in the background so the first
+	// search is instant instead of paying for it while the user types.
+	if len(m.indexes) > 0 {
+		paths := make([]string, 0, len(m.indexes))
+		for path := range m.indexes {
+			paths = append(paths, path)
 		}
+		go func() {
+			for _, path := range paths {
+				m.corpus(path)
+			}
+		}()
 	}
 	if m.enrich != nil {
 		go func() {
@@ -111,7 +137,36 @@ func NewManager(version, dataDir, cfgPath string, cfg *config.Config) *Manager {
 			log.Printf("ollama: text model %q, vision model %q", text, vision)
 		}()
 	}
+	go m.autoScanLoop()
 	return m
+}
+
+// autoScan keeps the index fresh without asking. Rescans are incremental:
+// unchanged files are copied from the previous index, so a quiet folder costs
+// one stat per file, not a full read.
+func (m *Manager) autoScanLoop() {
+	timer := time.NewTimer(3 * time.Second)
+	defer timer.Stop()
+	for range timer.C {
+		m.autoScan()
+		timer.Reset(2 * time.Minute)
+	}
+}
+
+func (m *Manager) autoScan() {
+	m.mu.RLock()
+	running := m.job.Running
+	roots := make([]string, 0, len(m.cfg.Roots))
+	for _, r := range m.cfg.Roots {
+		roots = append(roots, r.Path)
+	}
+	m.mu.RUnlock()
+	if running || len(roots) == 0 {
+		return
+	}
+	if err := m.StartScan(roots, false); err != nil && err.Error() != "a scan is already running" {
+		log.Printf("auto scan: %v", err)
+	}
 }
 
 // State builds a consistent snapshot for the UI.
@@ -247,11 +302,61 @@ func (m *Manager) runJob(ctx context.Context, roots []string, describeImages boo
 		content := !m.cfg.NoContent
 		m.mu.RUnlock()
 
+		// On a first scan there is nothing to search until the walk ends. Publish
+		// a partial index every couple of thousand documents so typing gives
+		// live results instead of a misleading "no hits". During a reindex the
+		// previous index stays visible until the new one is complete.
+		live := prev == nil
+		var partial []index.Doc
+		var partialMu sync.Mutex
+		var publishMu sync.Mutex
+		published := 0
+		publish := func(force bool) {
+			if !live {
+				return
+			}
+			publishMu.Lock()
+			defer publishMu.Unlock()
+			partialMu.Lock()
+			n := len(partial)
+			if n == 0 || (!force && n-published < 2000) {
+				partialMu.Unlock()
+				return
+			}
+			docs := make([]index.Doc, n)
+			copy(docs, partial)
+			published = n
+			partialMu.Unlock()
+
+			snapshot := &index.Index{
+				Version: index.Version,
+				Root:    root,
+				BuiltAt: time.Now().UTC(),
+				Docs:    docs,
+			}
+			m.mu.Lock()
+			m.indexes[root] = snapshot
+			delete(m.corpora, root)
+			m.mu.Unlock()
+		}
+
 		idx, err := index.Build(ctx, root, index.Options{
 			MaxFileMB:  maxMB,
 			Content:    content,
 			SkipHidden: true,
 			Prev:       prev,
+			OnDoc: func(d index.Doc) {
+				if !live {
+					return
+				}
+				partialMu.Lock()
+				partial = append(partial, d)
+				n := len(partial)
+				partialMu.Unlock()
+				if n%500 == 0 {
+					publish(false)
+				}
+			},
 			OnProgress: func(p index.Progress) {
 				m.updateJob(func(j *Job) {
 					j.Files = p.Files
@@ -263,6 +368,7 @@ func (m *Manager) runJob(ctx context.Context, roots []string, describeImages boo
 			},
 		})
 		if err != nil {
+			publish(true)
 			if ctx.Err() != nil {
 				break
 			}
@@ -323,6 +429,24 @@ func (m *Manager) describe(ctx context.Context, root string, idx *index.Index) {
 	added := 0
 	consecutive := 0
 	var lastErr error
+	// Captioning mutates docs while search may be reading them. Publish an
+	// immutable snapshot every batch so new captions become searchable without
+	// a data race and without waiting for the whole photo folder to finish.
+	publishCaptions := func() {
+		snap := &index.Index{
+			Version: idx.Version,
+			Root:    idx.Root,
+			BuiltAt: time.Now().UTC(),
+			Docs:    append([]index.Doc(nil), idx.Docs...),
+		}
+		m.mu.Lock()
+		m.indexes[root] = snap
+		delete(m.corpora, root)
+		m.mu.Unlock()
+		if err := index.Save(m.indexDir, snap); err != nil {
+			log.Printf("save captions: %v", err)
+		}
+	}
 	for i := range idx.Docs {
 		if ctx.Err() != nil {
 			return
@@ -351,19 +475,12 @@ func (m *Manager) describe(ctx context.Context, root string, idx *index.Index) {
 			j.Captions++
 			j.Path = d.Path
 		})
-		if added%25 == 0 {
-			if err := index.Save(m.indexDir, idx); err != nil {
-				log.Printf("save captions: %v", err)
-			}
+		if added%10 == 0 {
+			publishCaptions()
 		}
 	}
 	if added > 0 {
-		if err := index.Save(m.indexDir, idx); err != nil {
-			log.Printf("save captions: %v", err)
-		}
-		m.mu.Lock()
-		delete(m.corpora, root)
-		m.mu.Unlock()
+		publishCaptions()
 	}
 	if lastErr != nil && added == 0 {
 		m.updateJob(func(j *Job) { j.Error = lastErr.Error() })
@@ -464,7 +581,9 @@ func (m *Manager) expand(q string) []string {
 	}
 	m.expandMu.Unlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	// A miss must feel fast. Ollama is a bonus, not a reason to block the UI
+	// for eight seconds while the user is still typing.
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
 	defer cancel()
 	words, err := m.enrich.Keywords(ctx, q)
 	if err != nil {

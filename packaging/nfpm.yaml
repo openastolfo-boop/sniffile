@@ -1,0 +1,56 @@
+# nfpm builds .deb, .rpm and .apk packages from an already-built binary.
+#   VERSION=0.3.0 GOARCH=amd64 nfpm package -f packaging/nfpm.yaml -p deb
+# See scripts/package-unix.sh.
+name: sniffile
+arch: ${GOARCH}
+platform: linux
+version: ${VERSION}
+section: utils
+priority: optional
+maintainer: openastolfo-boop <openastolfo-boop@users.noreply.github.com>
+description: |
+  Fast local file search that never leaves your machine.
+  Indexes folders you choose and finds files by name, folder, date,
+  extension, image orientation and the text inside plain-text files.
+vendor: Sniffile
+homepage: https://github.com/openastolfo-boop/sniffile
+license: MIT
+provides:
+  - sniffile
+depends:
+  - libgtk-3-0
+  - libwebkit2gtk-4.1-0
+overrides:
+  rpm:
+    depends:
+      - gtk3
+      - webkit2gtk4.1
+  apk:
+    depends:
+      - gtk+3.0
+      - webkit2gtk-4.1
+contents:
+  - src: dist/sniffile
+    dst: /usr/bin/sniffile
+  - src: packaging/linux/sniffile.desktop
+    dst: /usr/share/applications/sniffile.desktop
+  - src: packaging/linux/sniffile.metainfo.xml
+    dst: /usr/share/metainfo/io.github.openastolfo-boop.sniffile.metainfo.xml
+  - src: packaging/icons/sniffile-16.png
+    dst: /usr/share/icons/hicolor/16x16/apps/sniffile.png
+  - src: packaging/icons/sniffile-24.png
+    dst: /usr/share/icons/hicolor/24x24/apps/sniffile.png
+  - src: packaging/icons/sniffile-32.png
+    dst: /usr/share/icons/hicolor/32x32/apps/sniffile.png
+  - src: packaging/icons/sniffile-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/sniffile.png
+  - src: packaging/icons/sniffile-64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/sniffile.png
+  - src: packaging/icons/sniffile-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/sniffile.png
+  - src: packaging/icons/sniffile-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/sniffile.png
+  - src: packaging/icons/sniffile-512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/sniffile.png
+  - src: LICENSE
+    dst: /usr/share/licenses/sniffile/LICENSE

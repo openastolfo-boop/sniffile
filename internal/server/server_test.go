@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kopeyka/sniffile/internal/config"
+	"github.com/openastolfo-boop/sniffile/internal/config"
 )
 
 func TestScanSearchAndPathSafety(t *testing.T) {

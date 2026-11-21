@@ -1,7 +1,7 @@
 package search
 
 import (
-	"github.com/kopeyka/sniffile/internal/index"
+	"github.com/openastolfo-boop/sniffile/internal/index"
 )
 
 // A tiny bilingual thesaurus. It is not a language model: it exists so that

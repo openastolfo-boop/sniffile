@@ -1,8 +1,8 @@
-// Command sniffile is a small local file search with a black-and-white web UI.
+// Command sniffile is a small local file search that runs as a desktop app.
 //
-//	sniffile                 # run the server and open the browser
-//	sniffile -addr :9000     # another port
-//	sniffile scan ~/Pictures # index from the terminal, no browser
+//	sniffile                 # open the native desktop window
+//	sniffile -server         # serve the same UI in a browser
+//	sniffile scan ~/Pictures # index from the terminal, no window
 package main
 
 import (
@@ -22,11 +22,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kopeyka/sniffile/internal/config"
-	"github.com/kopeyka/sniffile/internal/server"
+	"github.com/openastolfo-boop/sniffile/internal/config"
+	"github.com/openastolfo-boop/sniffile/internal/server"
 )
 
-var version = "0.1.0"
+var version = "0.3.0"
 
 func main() {
 	log.SetFlags(log.Ltime)
@@ -48,15 +48,23 @@ func main() {
 
 func runServer() {
 	fs := flag.NewFlagSet("sniffile", flag.ExitOnError)
-	addr := fs.String("addr", "127.0.0.1:8765", "listen address")
+	addr := fs.String("addr", "127.0.0.1:8765", "listen address (desktop mode picks a free port unless set)")
+	serverMode := fs.Bool("server", false, "run as a local web server and open the browser instead of a desktop window")
 	dataDir := fs.String("data", "", "data folder (default: user config dir)")
 	ollamaURL := fs.String("ollama", "auto", `ollama base url, "auto" to detect, "off" to disable`)
-	openBrowser := fs.Bool("open", true, "open the browser on start")
+	openBrowser := fs.Bool("open", true, "open the browser on start (server mode)")
 	maxFileMB := fs.Int64("max-file-mb", 0, "skip files bigger than this (0 = saved value, default 64)")
 	noContent := fs.Bool("no-content", false, "index names only, do not read text contents")
 	verbose := fs.Bool("v", false, "log every request")
 	fs.Usage = func() { usage() }
 	_ = fs.Parse(os.Args[1:])
+
+	addrSet := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "addr" {
+			addrSet = true
+		}
+	})
 
 	dir, err := resolveDataDir(*dataDir)
 	if err != nil {
@@ -97,7 +105,13 @@ func runServer() {
 		handler = logRequests(handler)
 	}
 
-	ln, err := net.Listen("tcp", *addr)
+	useDesktop := !*serverMode && desktopAvailable()
+	listenAddr := *addr
+	if useDesktop && !addrSet {
+		listenAddr = "127.0.0.1:0" // let the OS pick a free port
+	}
+
+	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		log.Fatalf("listen: %v", err)
 	}
@@ -109,7 +123,11 @@ func runServer() {
 	url := "http://" + net.JoinHostPort(host, port)
 
 	fmt.Printf("sniffile %s\n", version)
-	fmt.Printf("  open   %s\n", url)
+	if useDesktop {
+		fmt.Printf("  window native\n")
+	} else {
+		fmt.Printf("  open   %s\n", url)
+	}
 	fmt.Printf("  data   %s\n", dir)
 	if cfg.OllamaURL != "" {
 		fmt.Printf("  ollama %s\n", cfg.OllamaURL)
@@ -117,10 +135,6 @@ func runServer() {
 		fmt.Printf("  ollama off (plain index only)\n")
 	}
 	fmt.Printf("  ctrl-c to stop\n\n")
-
-	if *openBrowser {
-		openInBrowser(url)
-	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -131,15 +145,38 @@ func runServer() {
 		IdleTimeout:       90 * time.Second,
 	}
 	go func() {
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("serve: %v", err)
+		}
+	}()
+	go func() {
 		<-ctx.Done()
+		terminateWindow()
 		shutdown, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdown)
 	}()
 
-	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("serve: %v", err)
+	if useDesktop {
+		if err := runWindow(url); err != nil {
+			log.Printf("desktop window: %v", err)
+			log.Printf("falling back to the browser at %s", url)
+			if *openBrowser {
+				openInBrowser(url)
+			}
+			<-ctx.Done()
+		}
+	} else {
+		if *openBrowser {
+			openInBrowser(url)
+		}
+		<-ctx.Done()
 	}
+
+	stop()
+	shutdown, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	_ = srv.Shutdown(shutdown)
+	cancel()
 	fmt.Println("bye.")
 }
 
@@ -287,15 +324,17 @@ func usage() {
 	fmt.Print(`sniffile — local file search, black and white, no cloud
 
 usage:
-  sniffile                 run the server and open the browser
+  sniffile                 open the desktop window
+  sniffile -server         run the local web UI in a browser
   sniffile scan [folders]  index folders from the terminal
   sniffile version         print the version
 
-server flags:
-  -addr   listen address (default 127.0.0.1:8765)
+desktop / server flags:
+  -server run as a local web server instead of a desktop window
+  -addr   listen address (default 127.0.0.1:8765; desktop picks a free port)
   -data   data folder (default ~/.config/sniffile)
   -ollama "auto" | "off" | http://127.0.0.1:11434
-  -open   open the browser (default true)
+  -open   open the browser on start (default true, server mode only)
   -v      log every request
 
 scan flags:

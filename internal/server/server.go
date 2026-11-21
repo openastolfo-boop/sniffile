@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kopeyka/sniffile/internal/search"
-	"github.com/kopeyka/sniffile/web"
+	"github.com/openastolfo-boop/sniffile/internal/search"
+	"github.com/openastolfo-boop/sniffile/web"
 )
 
 // Server is just the manager plus a thumbnail cache.

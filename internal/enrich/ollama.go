@@ -22,7 +22,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/kopeyka/sniffile/internal/index"
+	"github.com/openastolfo-boop/sniffile/internal/index"
 )
 
 const defaultBase = "http://127.0.0.1:11434"

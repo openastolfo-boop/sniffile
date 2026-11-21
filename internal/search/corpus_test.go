@@ -3,7 +3,7 @@ package search
 import (
 	"testing"
 
-	"github.com/kopeyka/sniffile/internal/index"
+	"github.com/openastolfo-boop/sniffile/internal/index"
 )
 
 func doc(path, name string, kind string, nameTokens []string, tokens []string, caption string) index.Doc {

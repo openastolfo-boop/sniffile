@@ -1,9 +1,9 @@
 # Sniffile
 
-**Local file search that stays local.** One small Go binary, a black-and-white
-interface, and no cloud in the middle.
+**Local file search that stays local.** A native desktop app — one small Go
+binary, a black-and-white interface, no browser tab and no cloud in the middle.
 
-Type what you remember — `фотка с красивым мопсом`, `invoice march`,
+Type what you remember — `photo with a pug`, `invoice march`,
 `sunset 2024` — and get the file and the folder it lives in.
 
 ![sniffile](docs/screenshot.png)
@@ -20,32 +20,100 @@ Type what you remember — `фотка с красивым мопсом`, `invoi
 - Optionally uses a **local** [ollama](https://ollama.com) instance for query
   keywords and for one-line photo captions. Nothing leaves the machine.
 
-Zero Go dependencies. No CGO. No npm. No build step for the UI.
+One Go dependency (`webview_go`) for the native window. No npm, no JavaScript
+build step, no Electron.
 
 ## Install
 
-```sh
-go install github.com/kopeyka/sniffile/cmd/sniffile@latest
-```
+Pick your distribution. The desktop app needs GTK 3 and WebKitGTK; everything
+else is inside the binary.
 
-Or from a clone:
+### Arch, Manjaro, EndeavourOS, CachyOS, Garuda
 
 ```sh
-git clone https://github.com/kopeyka/sniffile
+sudo pacman -S --needed base-devel go gtk3 webkit2gtk-4.1
+git clone https://github.com/openastolfo-boop/sniffile
 cd sniffile
-make build          # -> bin/sniffile
+make build && sudo make install PREFIX=/usr
 ```
 
-Requires Go 1.22+.
+Or build a proper pacman package: `make arch` (writes `dist/sniffile-*.pkg.tar.zst`).
+
+### Debian 12+, Ubuntu 23.04+, Mint, Pop!_OS, Kali, Raspberry Pi OS
+
+```sh
+sudo apt install build-essential pkg-config golang-go libgtk-3-dev libwebkit2gtk-4.1-dev
+git clone https://github.com/openastolfo-boop/sniffile
+cd sniffile
+make build && sudo make install PREFIX=/usr
+```
+
+`make deb` produces a `.deb` you can install with `sudo apt install ./dist/sniffile_*.deb`.
+
+### Ubuntu 22.04, Debian 11 and older (WebKitGTK 4.0)
+
+Install `libwebkit2gtk-4.0-dev` instead and build with the legacy ABI:
+
+```sh
+make build-legacy && sudo make install PREFIX=/usr
+```
+
+### Fedora, RHEL, Rocky, Alma, openSUSE
+
+```sh
+sudo dnf install gcc make pkgconf-pkg-config golang gtk3-devel webkit2gtk4.1-devel
+git clone https://github.com/openastolfo-boop/sniffile
+cd sniffile
+make build && sudo make install PREFIX=/usr
+```
+
+`make rpm` builds an RPM (needs `rpmbuild` or `nfpm`).
+
+### Alpine
+
+```sh
+sudo apk add build-base go pkgconf gtk+3.0-dev webkit2gtk-4.1-dev
+make build && sudo make install PREFIX=/usr
+```
+
+`make apk` builds a native `.apk`, but it must run on Alpine: the binary has to
+be linked against musl, not glibc.
+
+### Any other Linux
+
+Grab the portable tarball from the releases page, unpack it anywhere and run
+`./sniffile`. It only needs GTK 3 and WebKitGTK 4.1 from the system. To add a
+menu entry, copy `sniffile.desktop` to `~/.local/share/applications/`.
+
+### Windows 10 and 11
+
+Download `sniffile-*-windows-amd64-setup.exe` (or the portable `.zip`) from the
+releases page. Microsoft Edge WebView2 is required; it ships with current
+Windows 10/11 and the installer offers the official download if it is missing.
+
+To build it yourself, use MSYS2:
+
+```sh
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-nsis zip
+./scripts/build-windows.sh
+```
+
+### macOS
+
+`make build` works on macOS (Cocoa/WebKit is provided by the system). There is
+no signed `.app` bundle yet.
 
 ## Use
 
 ```sh
-sniffile                          # server on 127.0.0.1:8765, opens the browser
-sniffile -addr 127.0.0.1:9000     # another port
-sniffile scan ~/Pictures ~/Docs   # index from the terminal, no browser
+sniffile                          # native desktop window
+sniffile -server                  # same UI in a browser, if you prefer
+sniffile scan ~/Pictures ~/Docs   # index from the terminal, no window
 sniffile scan -describe ~/Pics    # caption photos with ollama (see below)
 ```
+
+The window is the default. `-server` is only for headless machines and people
+who explicitly want a browser tab.
 
 In the UI: `+ folder` adds a scope, the × on a chip removes it, `all folders`
 searches everything. `reindex` rebuilds the current scope. Dropdown filters
@@ -55,10 +123,11 @@ narrow by file kind.
 
 | flag | default | meaning |
 |---|---|---|
-| `-addr` | `127.0.0.1:8765` | listen address |
+| `-server` | `false` | use the browser instead of the native window |
+| `-addr` | `127.0.0.1:8765` | listen address (the desktop picks a free port) |
 | `-data` | `~/.config/sniffile` | config + index folder |
 | `-ollama` | `auto` | `auto`, `off`, or a base URL |
-| `-open` | `true` | open the browser on start |
+| `-open` | `true` | open the browser on start (server mode only) |
 | `-max-file-mb` | saved / 64 | skip files bigger than this |
 | `-no-content` | `false` | names only, don't read text files |
 | `-v` | `false` | log every request |
@@ -131,6 +200,8 @@ ollama is enabled. There is no telemetry, no update check, no account.
 - Files over 64 MB are skipped by default.
 - Chinese/Japanese text is tokenized as one long word. Works poorly. PRs welcome.
 - One scan job at a time. This is a feature on spinning disks.
+- On Wayland + NVIDIA, Sniffile disables WebKit's DMA-BUF renderer because
+  WebKitGTK 2.52 crashes there. Set `SNIFFILE_DMABUF=1` if your driver works.
 
 ## Config file
 
@@ -161,13 +232,30 @@ make fmt
 Layout:
 
 ```
-cmd/sniffile      entry point, CLI, flags
+cmd/sniffile      entry point, CLI, native window
 internal/index    walker, tokenizer, index format
 internal/search   inverted index, BM25, synonyms, fuzzy
 internal/enrich   optional ollama client
 internal/server   HTTP API + print the manager
 web               embedded HTML/CSS/JS
+packaging/        desktop entry, icons, Arch/RPM/Windows/deb metadata
+scripts/          package builders for deb, rpm, apk, Arch, Windows
+debian/           debhelper source packaging
 ```
+
+### Packaging
+
+```sh
+make dist      # portable tar.gz
+make deb       # Debian/Ubuntu binary package (no debhelper needed)
+make rpm       # Fedora/openSUSE package (rpmbuild or nfpm)
+make apk       # Alpine package (nfpm)
+make arch      # Arch package via makepkg
+make windows   # Windows .exe, portable zip and NSIS installer
+```
+
+The release workflow builds Linux amd64 packages, a legacy WebKitGTK 4.0
+tarball, an Arch package and Windows artifacts for every `v*` tag.
 
 Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Please keep
 the dependency count at zero.

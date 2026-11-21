@@ -1,0 +1,21 @@
+Source: sniffile
+Section: utils
+Priority: optional
+Maintainer: openastolfo-boop <openastolfo-boop@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13), golang-go (>= 2:1.22~), pkg-config,
+ libgtk-3-dev, libwebkit2gtk-4.1-dev
+Standards-Version: 4.7.0
+Homepage: https://github.com/openastolfo-boop/sniffile
+Rules-Requires-Root: no
+
+Package: sniffile
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Fast local file search that never leaves your machine
+ Sniffile indexes folders you choose and finds files by name, folder,
+ date, extension, image orientation and text inside plain-text files.
+ It understands Russian and English queries, survives typos, and runs
+ in a native desktop window with no cloud dependency.
+ .
+ Optional photo captions and query expansion use a local ollama instance;
+ nothing is uploaded anywhere.

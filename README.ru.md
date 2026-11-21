@@ -1,7 +1,8 @@
 # Sniffile
 
-**Локальный поиск по файлам, который остаётся локальным.** Один небольшой
-бинарник на Go, чёрно-белый интерфейс, никакого облака посередине.
+**Локальный поиск по файлам, который остаётся локальным.** Нативное
+приложение — один небольшой бинарник на Go, чёрно-белый интерфейс, без
+вкладки браузера и без облака посередине.
 
 Пишешь то, что помнишь — `фотка с красивым мопсом`, `счёт за март`,
 `закат 2024` — и получаешь файл и папку, где он лежит.
@@ -20,32 +21,100 @@
 - Опционально использует **локальную** [ollama](https://ollama.com): ключевые
   слова для запроса и однострочные описания фотографий. Наружу ничего не уходит.
 
-Ноль зависимостей в Go. Без CGO. Без npm. У интерфейса нет сборки.
+Одна зависимость в Go (`webview_go`) для нативного окна. Без npm, без сборки
+JavaScript, без Electron.
 
 ## Установка
 
-```sh
-go install github.com/kopeyka/sniffile/cmd/sniffile@latest
-```
+Нужны GTK 3 и WebKitGTK, всё остальное уже внутри бинарника.
 
-Или из клона:
+### Arch, Manjaro, EndeavourOS, CachyOS, Garuda
 
 ```sh
-git clone https://github.com/kopeyka/sniffile
+sudo pacman -S --needed base-devel go gtk3 webkit2gtk-4.1
+git clone https://github.com/openastolfo-boop/sniffile
 cd sniffile
-make build          # -> bin/sniffile
+make build && sudo make install PREFIX=/usr
 ```
 
-Нужен Go 1.22+.
+Пакет для pacman: `make arch` (положит `dist/sniffile-*.pkg.tar.zst`).
+
+### Debian 12+, Ubuntu 23.04+, Mint, Pop!_OS, Kali, Raspberry Pi OS
+
+```sh
+sudo apt install build-essential pkg-config golang-go libgtk-3-dev libwebkit2gtk-4.1-dev
+git clone https://github.com/openastolfo-boop/sniffile
+cd sniffile
+make build && sudo make install PREFIX=/usr
+```
+
+`make deb` соберёт `.deb`, который ставится через
+`sudo apt install ./dist/sniffile_*.deb`.
+
+### Ubuntu 22.04, Debian 11 и старше (WebKitGTK 4.0)
+
+Поставь `libwebkit2gtk-4.0-dev` и собери со старым ABI:
+
+```sh
+make build-legacy && sudo make install PREFIX=/usr
+```
+
+### Fedora, RHEL, Rocky, Alma, openSUSE
+
+```sh
+sudo dnf install gcc make pkgconf-pkg-config golang gtk3-devel webkit2gtk4.1-devel
+git clone https://github.com/openastolfo-boop/sniffile
+cd sniffile
+make build && sudo make install PREFIX=/usr
+```
+
+`make rpm` соберёт RPM (нужен `rpmbuild` или `nfpm`).
+
+### Alpine
+
+```sh
+sudo apk add build-base go pkgconf gtk+3.0-dev webkit2gtk-4.1-dev
+make build && sudo make install PREFIX=/usr
+```
+
+`make apk` собирает родной `.apk`, но запускать его нужно на Alpine: бинарник
+должен быть слинкован с musl, а не glibc.
+
+### Другие Linux
+
+Скачай переносимый tar.gz со страницы релизов, распакуй куда угодно и запусти
+`./sniffile`. Из системы нужны только GTK 3 и WebKitGTK 4.1. Для пункта в меню
+скопируй `sniffile.desktop` в `~/.local/share/applications/`.
+
+### Windows 10 и 11
+
+Скачай `sniffile-*-windows-amd64-setup.exe` (или переносимый `.zip`) со
+страницы релизов. Нужен Microsoft Edge WebView2 — он уже есть в актуальной
+Windows 10/11, а установщик предложит официальную загрузку, если его нет.
+
+Сборка через MSYS2:
+
+```sh
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-nsis zip
+./scripts/build-windows.sh
+```
+
+### macOS
+
+`make build` работает на macOS (Cocoa/WebKit даёт система). Подписанного
+`.app` пока нет.
 
 ## Как пользоваться
 
 ```sh
-sniffile                          # сервер на 127.0.0.1:8765, откроет браузер
-sniffile -addr 127.0.0.1:9000     # другой порт
-sniffile scan ~/Pictures ~/Docs   # индексация из терминала, без браузера
+sniffile                          # нативное окно приложения
+sniffile -server                  # та же морда в браузере, если хочется
+sniffile scan ~/Pictures ~/Docs   # индексация из терминала, без окна
 sniffile scan -describe ~/Pics    # описания фото через ollama (ниже)
 ```
+
+По умолчанию всегда открывается окно. `-server` нужен только для машин без
+графики и для тех, кто сознательно хочет вкладку браузера.
 
 В интерфейсе: `+ folder` добавляет папку, × на чипе убирает её, `all folders`
 ищет везде. `reindex` перестраивает текущую область. Фильтры ниже сужают по
@@ -55,10 +124,11 @@ sniffile scan -describe ~/Pics    # описания фото через ollama 
 
 | флаг | по умолчанию | значение |
 |---|---|---|
-| `-addr` | `127.0.0.1:8765` | адрес |
+| `-server` | `false` | открыть в браузере вместо нативного окна |
+| `-addr` | `127.0.0.1:8765` | адрес (окно само выбирает свободный порт) |
 | `-data` | `~/.config/sniffile` | конфиг и индексы |
 | `-ollama` | `auto` | `auto`, `off` или базовый URL |
-| `-open` | `true` | открыть браузер при старте |
+| `-open` | `true` | открыть браузер при старте (только режим сервера) |
 | `-max-file-mb` | сохранённое / 64 | пропускать файлы больше |
 | `-no-content` | `false` | только имена, без чтения текста |
 | `-v` | `false` | логировать каждый запрос |
@@ -134,6 +204,8 @@ ollama. Ни телеметрии, ни проверки обновлений, �
 - Китайский/японский текст токенизируется как одно длинное слово. Работает
   плохо. PR приветствуются.
 - Одновременно идёт только одно сканирование. На HDD это фича.
+- На Wayland + NVIDIA отключается DMA-BUF рендерер WebKit: WebKitGTK 2.52 там
+  падает. Вернуть можно через `SNIFFILE_DMABUF=1`.
 
 ## Конфиг
 
@@ -164,16 +236,30 @@ make fmt
 Структура:
 
 ```
-cmd/sniffile      вход, CLI, флаги
+cmd/sniffile      вход, CLI, нативное окно
 internal/index    обход, токенизатор, формат индекса
 internal/search   инвертированный индекс, BM25, синонимы, нечёткий поиск
 internal/enrich   опциональный клиент ollama
 internal/server   HTTP API и менеджер
 web               встроенные HTML/CSS/JS
+packaging/        desktop-файл, иконки, Arch/RPM/Windows/deb
+scripts/          сборка deb, rpm, apk, Arch и Windows пакетов
+debian/           исходная сборка через debhelper
 ```
 
-PR приветствуются, см. [CONTRIBUTING.md](CONTRIBUTING.md). Пожалуйста, держите
-количество зависимостей нулевым.
+Пакеты:
+
+```sh
+make dist      # переносимый tar.gz
+make deb       # Debian/Ubuntu (debhelper не нужен)
+make rpm       # Fedora/openSUSE (rpmbuild или nfpm)
+make apk       # Alpine (nfpm)
+make arch      # Arch через makepkg
+make windows   # .exe, zip и установщик NSIS
+```
+
+PR приветствуются, см. [CONTRIBUTING.md](CONTRIBUTING.md). Пожалуйста, не
+раздувайте список зависимостей.
 
 ## Лицензия
 

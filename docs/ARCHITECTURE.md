@@ -10,12 +10,52 @@
 
 | package | job |
 |---|---|
-| `cmd/sniffile` | flags, banner, `scan` subcommand, graceful shutdown |
-| `internal/index` | walk a root, tokenize, read headers/content, save/load |
+| `cmd/sniffile` | flags, banner, `scan` subcommand, native window, graceful shutdown |
+| `internal/index` | parallel walk, tokenize, read headers/content, save/load |
 | `internal/search` | inverted index, BM25, thesaurus, fuzzy matching |
 | `internal/enrich` | optional HTTP client for a local ollama |
 | `internal/server` | manager (one scan job), REST API, thumbnails, path checks |
 | `web` | `go:embed` of the plain HTML/CSS/JS front end |
+| `packaging/` | desktop entry, icons, Arch/RPM/Windows/deb metadata |
+| `scripts/` | package builders for deb, rpm, apk, Arch and Windows |
+| `debian/` | debhelper source packaging |
+
+## Desktop window
+
+The app is a native window, not a website. On Linux and Windows the binary is
+built with CGO and links the vendored `webview_go` fork to GTK 3 + WebKitGTK
+(or WebView2 on Windows). The HTTP server still exists, but only on
+`127.0.0.1` with an OS-assigned port, and the window is pointed at it. That
+keeps the UI plain HTML/CSS/JS while the user never sees a browser.
+
+Two build variants cover the WebKitGTK split:
+
+- default: `webkit2gtk-4.1` (Debian 12+, Ubuntu 23.04+, Fedora 38+, Arch)
+- legacy: `-tags webkit2_40` for Debian 11 / Ubuntu 22.04.
+
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` is set automatically on Linux because
+WebKitGTK 2.52 crashes in its DMA-BUF renderer on some Wayland + NVIDIA
+setups. `SNIFFILE_DMABUF=1` opts out.
+
+`-server` keeps the old browser path for headless machines. If the native
+window cannot be created, the process logs the reason and falls back to the
+browser instead of exiting silently.
+
+## Packaging
+
+| target | output |
+|---|---|
+| `make dist` | portable `.tar.gz` (binary, desktop file, icons, docs) |
+| `make deb` | Debian binary package built with `ar` + `tar`, no debhelper needed |
+| `make rpm` | RPM via `rpmbuild` or `nfpm` |
+| `make apk` | Alpine package via `nfpm` |
+| `make arch` | pacman package via `makepkg` |
+| `make windows` | `.exe`, portable `.zip`, NSIS `setup.exe` |
+
+`scripts/package-deb.sh` deliberately does not depend on `dpkg-deb`, so a
+release can be assembled on Arch or Fedora. CI builds the native variants on
+real Ubuntu 24.04 (4.1) and Ubuntu 22.04 (4.0), Windows through MSYS2, and Arch
+inside an `archlinux` container.
 
 ## Index format
 
@@ -90,6 +130,12 @@ Ollama being down is never an error the user has to care about.
 
 - One background job slot, guarded by a mutex. `POST /api/scan` returns `409`
   when one is already running.
+- A scan walks directories on one goroutine and processes files on up to eight
+  workers: metadata, 192 KB text heads and image headers are independent and
+  dominate the wall clock. Documents are sorted by path at the end, so the
+  output is deterministic.
+- Saved indexes load in parallel at startup, and in-memory BM25 corpora are
+  warmed in the background so the first search does not block typing.
 - Corpora are immutable snapshots; a scan invalidates the snapshot at the end,
   so searches never see half-updated data.
 - Thumbnails live in a size-bounded in-memory map (192 entries, arbitrary

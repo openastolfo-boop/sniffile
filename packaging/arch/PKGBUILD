@@ -1,0 +1,32 @@
+# Maintainer: openastolfo-boop <openastolfo-boop@users.noreply.github.com>
+pkgname=sniffile
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="Fast local file search that never leaves your machine"
+arch=('x86_64' 'aarch64')
+url="https://github.com/openastolfo-boop/sniffile"
+license=('MIT')
+depends=('gtk3' 'webkit2gtk-4.1')
+makedepends=('go')
+options=('!strip' '!debug')
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  export CGO_ENABLED=1
+  go build -trimpath -ldflags "-s -w -X main.version=$pkgver" -o sniffile ./cmd/sniffile
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+  install -Dm755 sniffile "$pkgdir/usr/bin/sniffile"
+  install -Dm644 packaging/linux/sniffile.desktop "$pkgdir/usr/share/applications/sniffile.desktop"
+  install -Dm644 packaging/linux/sniffile.metainfo.xml "$pkgdir/usr/share/metainfo/io.github.openastolfo-boop.sniffile.metainfo.xml"
+  install -Dm644 packaging/linux/sniffile.1 "$pkgdir/usr/share/man/man1/sniffile.1"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/sniffile/LICENSE"
+  for s in 16 24 32 48 64 128 256 512; do
+    install -Dm644 "packaging/icons/sniffile-$s.png" \
+      "$pkgdir/usr/share/icons/hicolor/${s}x${s}/apps/sniffile.png"
+  done
+}

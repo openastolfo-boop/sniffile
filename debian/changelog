@@ -1,0 +1,9 @@
+sniffile (0.3.0-1) unstable; urgency=medium
+
+  * Native desktop window is now the default on Linux and Windows.
+  * Fixed WebKitGTK build failure on WebKitGTK 4.1-only distributions.
+  * Fixed a Wayland + NVIDIA crash in the GTK web view.
+  * Added Debian, RPM, Alpine, Arch and Windows packaging.
+  * Added desktop entry, AppStream metadata, man page and icons.
+
+ -- openastolfo-boop <openastolfo-boop@users.noreply.github.com>  Sun, 15 Nov 2026 11:00:00 +0000

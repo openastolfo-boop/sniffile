@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.openastolfo-boop.sniffile</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Sniffile</name>
+  <summary>Fast local file search that never leaves your machine</summary>
+  <description>
+    <p>
+      Sniffile indexes the folders you choose and finds files by name, folder,
+      date, extension, image orientation and the text inside plain-text files.
+      It understands Russian and English queries, survives typos and works
+      completely offline.
+    </p>
+    <p>
+      The desktop app is a single small binary with a native window. Optional
+      photo captions and query expansion can use a local ollama instance; no
+      data is ever sent to a cloud service.
+    </p>
+  </description>
+  <launchable type="desktop-id">sniffile.desktop</launchable>
+  <url type="homepage">https://github.com/openastolfo-boop/sniffile</url>
+  <url type="bugtracker">https://github.com/openastolfo-boop/sniffile/issues</url>
+  <developer id="io.github.openastolfo-boop">
+    <name>openastolfo-boop</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.3.0" date="2026-11-15">
+      <description>
+        <p>Native desktop packaging for Linux and Windows, faster startup, Wayland fix.</p>
+      </description>
+    </release>
+  </releases>
+  <provides>
+    <binary>sniffile</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+    <category>FileTools</category>
+  </categories>
+  <keywords>
+    <keyword>search</keyword>
+    <keyword>find</keyword>
+    <keyword>files</keyword>
+    <keyword>local</keyword>
+    <keyword>offline</keyword>
+  </keywords>
+</component>

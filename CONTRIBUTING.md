@@ -4,10 +4,14 @@ Thanks for taking a look. This is a small tool and it would like to stay small.
 
 ## Ground rules
 
-- **Zero dependencies.** Standard library only, no CGO. If a feature seems to
-  need a library, open an issue first and argue for it.
+- **Almost zero dependencies.** Standard library plus the vendored
+  `webview_go` fork that provides the native window. Everything else is CGO
+  through GTK/WebKit already present on the system. If a feature seems to need
+  another library, open an issue first and argue for it.
 - **No build step for the UI.** `web/assets/` is plain HTML/CSS/JS, embedded
   with `go:embed`. Keep it that way.
+- **Native first.** `sniffile` opens a window; `-server` is the fallback for
+  headless machines. Do not turn the desktop app back into a browser launcher.
 - **Keep it local.** No telemetry, no remote services, no analytics. The only
   allowed network peer is a local ollama instance.
 - **Match the style.** Lowercase comments that explain *why*, not *what*.
@@ -16,13 +20,19 @@ Thanks for taking a look. This is a small tool and it would like to stay small.
 ## Development
 
 ```sh
-make build     # bin/sniffile
+make build     # bin/sniffile (native window, CGO)
 make test
 make vet
 make fmt
+make dist deb  # optional: packages
 ```
 
-Requires Go 1.22 or newer.
+Requires Go 1.22+ and GTK 3 + WebKitGTK development headers:
+
+- Arch: `gtk3 webkit2gtk-4.1`
+- Debian/Ubuntu: `libgtk-3-dev libwebkit2gtk-4.1-dev`
+- Fedora: `gtk3-devel webkit2gtk4.1-devel`
+- Older distros with WebKitGTK 4.0: `make build-legacy`
 
 ## What is easy to help with
 

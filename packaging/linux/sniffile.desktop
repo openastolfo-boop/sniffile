@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Sniffile
+GenericName=Local File Search
+Comment=Fast local file search that never leaves your machine
+Exec=sniffile
+TryExec=sniffile
+Icon=sniffile
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=search;find;files;local;offline;photos;documents;
+StartupNotify=true
+StartupWMClass=sniffile

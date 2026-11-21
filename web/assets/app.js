@@ -7,6 +7,166 @@
   const $ = (id) => document.getElementById(id);
   const KINDS = ["image", "video", "audio", "text", "code", "doc", "archive", "other"];
 
+  // The UI follows the system/browser language. Russian and English are
+  // deliberately the only dictionaries: adding another one is just another
+  // object here, no build step.
+  const LANG = String(
+    (navigator.languages && navigator.languages[0]) || navigator.language || "en"
+  )
+    .toLowerCase()
+    .startsWith("ru")
+    ? "ru"
+    : "en";
+  const STR = {
+    en: {
+      title: "sniffile — local file search",
+      sub: "local file search",
+      placeholder: "photo of a cute pug",
+      clear: "clear",
+      stop: "stop",
+      reindex: "reindex",
+      describePhotos: "describe photos",
+      files: "files",
+      allFolders: "all folders",
+      addFolder: "+ folder",
+      removeRoot: "Remove {path} from the index?",
+      everything: "everything",
+      image: "image",
+      video: "video",
+      audio: "audio",
+      text: "text",
+      code: "code",
+      doc: "doc",
+      archive: "archive",
+      other: "other",
+      indexing: "indexing {root} · {n} files · {path}",
+      describing: "describing photos · {n} captions · {path}",
+      cancelled: "scan cancelled.",
+      warning: "scan finished with a warning: {err}",
+      ready: "index ready.",
+      hits: "{n} hits · {ms} ms",
+      hitOne: "1 hit · {ms} ms",
+      partial: " · indexing {n} files (partial)",
+      indexingNow: " · indexing {n} files",
+      noHits: "no hits for “{q}”",
+      tryFewer: "Try fewer words, a different spelling, or switch the folder scope above.",
+      onlyFolders: "Only folders added above are searched. If the file lives elsewhere, use “+ folder” to add its parent folder.",
+      visionHint: "Photos are searchable by name right now. Pull a vision model (ollama pull moondream) and reindex with “describe photos” to search what is in the picture.",
+      reindexScope: "reindex this scope",
+      zeroHits: "0 hits · {ms} ms",
+      stillIndexing: "still indexing…",
+      scanned: "Scanned {n} files so far. This search updates automatically as the index grows.",
+      noMatchesYet: "no matches in the scanned part yet for “{q}”.",
+      indexingPartial: "indexing · {n} files · partial results",
+      idle: "  no query yet.\n  type what you remember — a name, a folder, a phrase.",
+      startFolder: "start with a folder",
+      pickOne: "Pick one folder, or add several. “all folders” searches everything you added.",
+      addFolderBtn: "+ add a folder",
+      whatWorks: "what works",
+      works1: "file and folder names — “invoice march”, “screenshot 2026”",
+      works2: "text inside txt / md / json / source files",
+      works3: "dates, image orientation, extensions, sizes",
+      works4: "plain-language queries, expanded by the local ollama model",
+      works4off: "plain-language queries (add ollama for translation and photo captions)",
+      indexedIn: "{n} files indexed in {folders} · everything stays on this machine",
+      folderOne: "1 folder",
+      folderMany: "{n} folders",
+      open: "open",
+      folder: "folder",
+      pickFolder: "pick a folder to index",
+      addFolderTitle: "add a folder",
+      useFolder: "use this folder",
+      go: "go",
+      noSubfolders: "no subfolders",
+      added: "added {path} — indexing starts now.",
+      scanQueued: "scan queued.",
+      stopping: "stopping after the current folder…",
+      readyLog: "ready.",
+      ollamaText: "text: {model}",
+      ollamaNoText: "text: none",
+      ollamaVision: "vision: {model}",
+      ollamaNoVision: "vision: none (ollama pull moondream)",
+      ollamaAlso: "ollama also tried: {words}",
+    },
+    ru: {
+      title: "sniffile — поиск по файлам",
+      sub: "локальный поиск файлов",
+      placeholder: "фотка с красивым мопсом",
+      clear: "очистить",
+      stop: "стоп",
+      reindex: "переиндексировать",
+      describePhotos: "описывать фото",
+      files: "файлов",
+      allFolders: "все папки",
+      addFolder: "+ папка",
+      removeRoot: "Убрать {path} из индекса?",
+      everything: "всё",
+      image: "картинки",
+      video: "видео",
+      audio: "аудио",
+      text: "текст",
+      code: "код",
+      doc: "документы",
+      archive: "архивы",
+      other: "другое",
+      indexing: "индексация {root} · {n} файлов · {path}",
+      describing: "описываю фото · {n} подписей · {path}",
+      cancelled: "сканирование отменено.",
+      warning: "скан завершился с предупреждением: {err}",
+      ready: "индекс готов.",
+      hits: "{n} совпадений · {ms} мс",
+      hitOne: "1 совпадение · {ms} мс",
+      partial: " · индексация {n} файлов (частично)",
+      indexingNow: " · индексация {n} файлов",
+      noHits: "ничего не найдено по «{q}»",
+      tryFewer: "Попробуй меньше слов, другое написание или другую папку сверху.",
+      onlyFolders: "Ищутся только добавленные папки. Если файл лежит в другом месте, добавь его папку через «+ папка».",
+      visionHint: "Пока фото ищутся по имени. Поставь vision-модель (ollama pull moondream) и переиндексируй с галочкой «описывать фото», чтобы искать по содержимому картинки.",
+      reindexScope: "переиндексировать эту папку",
+      zeroHits: "0 совпадений · {ms} мс",
+      stillIndexing: "ещё индексирую…",
+      scanned: "Просканировано {n} файлов. Результаты обновятся автоматически.",
+      noMatchesYet: "в просканированной части пока нет совпадений по «{q}».",
+      indexingPartial: "индексация · {n} файлов · частичные результаты",
+      idle: "  пока нет запроса.\n  напиши, что помнишь — имя, папку, фразу.",
+      startFolder: "начни с папки",
+      pickOne: "Выбери папку или добавь несколько. «все папки» ищет по всем добавленным.",
+      addFolderBtn: "+ добавить папку",
+      whatWorks: "что ищется",
+      works1: "имена файлов и папок — «счёт март», «скриншот 2026»",
+      works2: "текст внутри txt / md / json / исходников",
+      works3: "даты, ориентация картинок, расширения, размеры",
+      works4: "запросы обычными словами через локальную ollama",
+      works4off: "запросы обычными словами (добавь ollama для перевода и описания фото)",
+      indexedIn: "{n} файлов в {folders} · всё остаётся на этой машине",
+      folderOne: "1 папке",
+      folderMany: "{n} папках",
+      open: "открыть",
+      folder: "папка",
+      pickFolder: "выбери папку для индексации",
+      addFolderTitle: "добавить папку",
+      useFolder: "использовать эту папку",
+      go: "перейти",
+      noSubfolders: "нет вложенных папок",
+      added: "добавлена {path} — индексация началась.",
+      scanQueued: "скан поставлен в очередь.",
+      stopping: "останавливаюсь после текущей папки…",
+      readyLog: "готово.",
+      ollamaText: "текст: {model}",
+      ollamaNoText: "текст: нет",
+      ollamaVision: "картинки: {model}",
+      ollamaNoVision: "картинки: нет (ollama pull moondream)",
+      ollamaAlso: "ollama также пробовала: {words}",
+    },
+  };
+  const t = (key, vars) => {
+    let s = (STR[LANG] && STR[LANG][key]) || STR.en[key] || key;
+    return String(s).replace(/\{(\w+)\}/g, (_, k) =>
+      vars && vars[k] != null ? String(vars[k]) : ""
+    );
+  };
+  const kindLabel = (k) => t(k);
+
   const S = {
     roots: [],
     root: "all",
@@ -23,6 +183,9 @@
     timer: 0,
     poll: null,
     wasRunning: false,
+    job: {},
+    lastLive: 0,
+    lastLiveFiles: -1,
   };
 
   /* ------------------------------------------------------------ helpers */
@@ -114,19 +277,20 @@
     }
     renderRoots();
     updateMeta(st);
-    handleJob(st.job || {});
+    S.job = st.job || {};
+    handleJob(S.job);
   }
 
   function updateMeta(st) {
-    $("total").textContent = fmtNum(st.total) + " files";
+    $("total").textContent = fmtNum(st.total) + " " + t("files");
 
     const pill = $("ollama");
     if (st.ollama) {
       pill.hidden = false;
       pill.textContent = st.ollama_vision ? "ollama · vision" : "ollama · text";
       pill.title = [
-        st.ollama_text ? "text: " + st.ollama_text : "text: none",
-        st.ollama_vision ? "vision: " + st.ollama_vision : "vision: none (ollama pull llava)",
+        st.ollama_text ? t("ollamaText", { model: st.ollama_text }) : t("ollamaNoText"),
+        st.ollama_vision ? t("ollamaVision", { model: st.ollama_vision }) : t("ollamaNoVision"),
       ].join("\n");
     } else {
       pill.hidden = true;
@@ -139,7 +303,7 @@
     const host = $("roots");
     host.textContent = "";
 
-    const all = el("button", "root" + (S.root === "all" ? " on" : ""), "all folders");
+    const all = el("button", "root" + (S.root === "all" ? " on" : ""), t("allFolders"));
     all.addEventListener("click", () => {
       S.root = "all";
       renderRoots();
@@ -162,7 +326,7 @@
       x.title = "remove this folder";
       x.addEventListener("click", async (ev) => {
         ev.stopPropagation();
-        if (!confirm("Remove " + r.path + " from the index?")) return;
+        if (!confirm(t("removeRoot", { path: r.path }))) return;
         try {
           applyState(
             await api("/api/roots?path=" + encodeURIComponent(r.path), {
@@ -178,7 +342,7 @@
       host.appendChild(chip);
     }
 
-    const add = el("button", "root add", "+ folder");
+    const add = el("button", "root add", t("addFolder"));
     add.addEventListener("click", () => openPicker(S.home));
     host.appendChild(add);
   }
@@ -195,8 +359,8 @@
       });
       return b;
     };
-    host.appendChild(mk("", "everything"));
-    for (const k of KINDS) host.appendChild(mk(k, k));
+    host.appendChild(mk("", t("everything")));
+    for (const k of KINDS) host.appendChild(mk(k, kindLabel(k)));
   }
 
   /* ---------------------------------------------------------------- jobs */
@@ -208,31 +372,44 @@
 
     if (running) {
       S.wasRunning = true;
+      // Live results: the backend publishes a partial index while a first
+      // scan is running, so refresh an active query as files arrive.
+      if (
+        S.q.trim() &&
+        job.phase !== "describing" &&
+        job.files !== S.lastLiveFiles &&
+        Date.now() - S.lastLive > 1200
+      ) {
+        S.lastLive = Date.now();
+        S.lastLiveFiles = job.files;
+        searchNow();
+      }
       if (job.phase === "describing") {
         setLog(
-          "describing photos · " +
-            fmtNum(job.captions) +
-            " captions · " +
-            shortPath(job.path || "")
+          t("describing", {
+            n: fmtNum(job.captions),
+            path: shortPath(job.path || ""),
+          })
         );
       } else {
         setLog(
-          "indexing " +
-            shortPath(job.root || "") +
-            " · " +
-            fmtNum(job.files) +
-            " files · " +
-            shortPath(job.path || "")
+          t("indexing", {
+            root: shortPath(job.root || ""),
+            n: fmtNum(job.files),
+            path: shortPath(job.path || ""),
+          })
         );
       }
     } else if (S.wasRunning) {
       S.wasRunning = false;
+      S.lastLiveFiles = -1;
+      S.lastLive = 0;
       if (job.phase === "cancelled") {
-        setLog("scan cancelled.");
+        setLog(t("cancelled"));
       } else if (job.error) {
-        setLog("scan finished with a warning: " + job.error, true);
+        setLog(t("warning", { err: job.error }), true);
       } else {
-        setLog("index ready.");
+        setLog(t("ready"));
       }
       refreshState();
       if (S.q) searchNow();
@@ -294,15 +471,16 @@
     res.results.forEach((r, i) => host.appendChild(hitRow(r, i, max)));
 
     const extra = res.expanded && res.expanded.length
-      ? " · ollama: " + res.expanded.join(", ")
+      ? " · " + t("ollamaAlso", { words: res.expanded.join(", ") })
       : "";
     setLog(
-      fmtNum(res.count) +
-        (res.count === 1 ? " hit" : " hits") +
-        " · " +
-        res.took_ms +
-        " ms" +
-        extra
+      (res.count === 1
+        ? t("hitOne", { ms: res.took_ms })
+        : t("hits", { n: fmtNum(res.count), ms: res.took_ms })) +
+        extra +
+        (S.job && S.job.running
+          ? t("partial", { n: fmtNum(S.job.files) })
+          : "")
     );
   }
 
@@ -445,31 +623,35 @@
   function renderNoHits(res) {
     const host = $("results");
     const box = el("div", "empty");
-    box.appendChild(el("h2", null, "no hits for “" + res.query + "”"));
-    box.appendChild(
-      el("p", null, "Try fewer words, a different spelling, or switch the folder scope above.")
-    );
+    const indexing = !!(S.job && S.job.running && S.job.phase !== "describing");
+
+    if (indexing) {
+      box.appendChild(el("h2", null, t("stillIndexing")));
+      box.appendChild(el("p", null, t("scanned", { n: fmtNum(S.job.files) })));
+      box.appendChild(el("p", "small", t("noMatchesYet", { q: res.query })));
+      host.appendChild(box);
+      setLog(t("indexingPartial", { n: fmtNum(S.job.files) }));
+      return;
+    }
+
+    box.appendChild(el("h2", null, t("noHits", { q: res.query })));
+    box.appendChild(el("p", null, t("tryFewer")));
+    box.appendChild(el("p", "small", t("onlyFolders")));
 
     if (res.expanded && res.expanded.length) {
       box.appendChild(
-        el("p", "small", "ollama also tried: " + res.expanded.join(", "))
+        el("p", "small", t("ollamaAlso", { words: res.expanded.join(", ") }))
       );
     }
     if (S.ollama && !S.vision) {
-      box.appendChild(
-        el(
-          "p",
-          "small",
-          "Photos are only searchable by name right now. Pull a vision model (ollama pull llava) and reindex with “describe photos” for content search."
-        )
-      );
+      box.appendChild(el("p", "small", t("visionHint")));
     }
 
-    const b = el("button", "btn", "reindex this scope");
+    const b = el("button", "btn", t("reindexScope"));
     b.addEventListener("click", startScan);
     box.appendChild(b);
     host.appendChild(box);
-    setLog("0 hits · " + res.took_ms + " ms");
+    setLog(t("zeroHits", { ms: res.took_ms }));
   }
 
   /* ------------------------------------------------------------- actions */

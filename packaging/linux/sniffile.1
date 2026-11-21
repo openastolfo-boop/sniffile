@@ -1,0 +1,79 @@
+.TH SNIFFILE 1 "November 2026" "sniffile" "User Commands"
+.SH NAME
+sniffile \- fast local file search that never leaves your machine
+.SH SYNOPSIS
+.B sniffile
+[\fIOPTIONS\fR]
+.br
+.B sniffile scan
+[\fB-describe\fR] [\fIFOLDERS\fR...]
+.SH DESCRIPTION
+.B sniffile
+opens a native desktop window and searches folders you explicitly add. It
+indexes file names, folder names, dates, extensions, image orientation and the
+first part of plain-text files. Russian and English queries are understood,
+and a one-edit fuzzy pass catches typos.
+.PP
+Nothing is uploaded. The only optional network calls go to a local
+\fBollama\fR instance on 127.0.0.1 if one is running.
+.SH OPTIONS
+.TP
+.B \-server
+Run the local web UI in a browser instead of a native window.
+.TP
+.BI \-addr " ADDR"
+Listen address. Desktop mode picks a free loopback port by default.
+.TP
+.BI \-data " DIR"
+Data folder. Default: \fI~/.config/sniffile\fR (or the platform equivalent).
+.TP
+.BI \-ollama " MODE"
+\fIauto\fR (default), \fIoff\fR, or a base URL such as
+\fIhttp://127.0.0.1:11434\fR.
+.TP
+.BI \-max-file-mb " N"
+Skip files larger than N megabytes. Default 64.
+.TP
+.B \-no-content
+Index names only; do not read text file contents.
+.TP
+.B \-open
+Open the browser on start in \fB\-server\fR mode. Default true.
+.TP
+.B \-v
+Log every HTTP request.
+.SH SUBCOMMANDS
+.TP
+.B scan [\fIFOLDERS\fR...]
+Index the given folders (or every configured folder) from the terminal and
+exit. Suitable for cron.
+.TP
+.B version
+Print the version.
+.SH FILES
+.TP
+.I ~/.config/sniffile/config.json
+Folders, limits and the optional ollama URL.
+.TP
+.I ~/.config/sniffile/index/*.json.gz
+One cache file per indexed folder. Safe to delete at any time.
+.SH ENVIRONMENT
+.TP
+.B SNIFFILE_DATA
+Overrides the data folder.
+.TP
+.B WEBKIT_DISABLE_DMABUF_RENDERER
+Set to 1 automatically on Linux to avoid a WebKitGTK crash on some
+Wayland + NVIDIA systems. Set \fISNIFFILE_DMABUF=1\fR to opt out.
+.SH EXAMPLES
+.nf
+sniffile
+sniffile scan ~/Pictures ~/Documents
+sniffile scan -describe ~/Pictures
+sniffile -server -addr 127.0.0.1:9000
+.fi
+.SH SEE ALSO
+.BR find (1),
+.BR fd (1)
+.SH AUTHOR
+openastolfo-boop. MIT licensed. https://github.com/openastolfo-boop/sniffile
