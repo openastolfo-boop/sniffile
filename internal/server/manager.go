@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -644,24 +645,34 @@ func (m *Manager) Resolve(p string) (string, error) {
 	}
 	m.mu.RUnlock()
 	for _, root := range roots {
-		if real == root || strings.HasPrefix(real, root+string(os.PathSeparator)) {
+		if pathWithin(real, root) {
 			return real, nil
 		}
 	}
 	return "", errors.New("outside the folders you added")
 }
 
-// OpenInSystem launches the desktop default app. reveal=true opens the
-// containing folder instead.
+// pathWithin compares a resolved file with an indexed root. Windows treats
+// paths case-insensitively, so a root added as C:\Users\Me must still match a
+// path reported as c:\users\me by the filesystem.
+func pathWithin(p, root string) bool {
+	if p == root {
+		return true
+	}
+	if runtime.GOOS == "windows" {
+		p, root = strings.ToLower(p), strings.ToLower(root)
+	}
+	return strings.HasPrefix(p, root+string(os.PathSeparator))
+}
+
+// OpenInSystem launches the desktop default app. reveal=true selects the file
+// in the system file manager instead.
 func (m *Manager) OpenInSystem(p string, reveal bool) error {
 	real, err := m.Resolve(p)
 	if err != nil {
 		return err
 	}
-	if reveal {
-		real = filepath.Dir(real)
-	}
-	return openPath(real)
+	return openPath(real, reveal)
 }
 
 // BrowseEntry is one folder in the picker.

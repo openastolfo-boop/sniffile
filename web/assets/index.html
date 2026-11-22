@@ -103,8 +103,8 @@
   <ul>
     <li>Keyword matching, not vector embeddings. A photo is only findable by
       name or caption.</li>
-    <li>EXIF orientation is ignored; some phone photos may look sideways in
-      the preview.</li>
+    <li>EXIF orientation is applied, but HEIC/AVIF/RAW previews are not
+      decoded. Those files are still searchable by name.</li>
     <li>Only plain text is read for content, not PDF/DOCX.</li>
     <li>Hidden folders and <code>node_modules</code>-style junk are skipped.</li>
   </ul>

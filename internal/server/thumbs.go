@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"image/jpeg"
+	"io"
 	"math"
 	"os"
 	"sync"
@@ -82,6 +83,17 @@ func renderThumb(path string) ([]byte, error) {
 	}
 	defer f.Close()
 
+	// Phone cameras store the sensor image in landscape and describe the real
+	// orientation in EXIF. Resizing drops all metadata, so bake the rotation in
+	// before the JPEG is written. Read it first, then rewind for the decoder.
+	orientation := 1
+	if _, err := f.Seek(0, io.SeekStart); err == nil {
+		orientation = jpegOrientation(f)
+	}
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return nil, errNoPreview
+	}
+
 	src, _, err := image.Decode(f)
 	if err != nil {
 		return nil, errNoPreview
@@ -94,11 +106,55 @@ func renderThumb(path string) ([]byte, error) {
 	if small == nil {
 		return nil, errNoPreview
 	}
+	return encodeThumb(applyOrientation(small, orientation))
+}
+
+// encodeThumb writes the grayscale JPEG served by /api/thumb.
+func encodeThumb(src image.Image) ([]byte, error) {
 	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, toGray(small), &jpeg.Options{Quality: 80}); err != nil {
+	if err := jpeg.Encode(&buf, toGray(src), &jpeg.Options{Quality: 80}); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// applyOrientation maps the eight EXIF orientations onto pixel coordinates.
+// It runs after downscaling, so the extra image is tiny rather than a second
+// full-resolution copy of the photo.
+func applyOrientation(src image.Image, orientation int) image.Image {
+	if orientation < 2 || orientation > 8 {
+		return src
+	}
+	b := src.Bounds()
+	w, h := b.Dx(), b.Dy()
+	dw, dh := w, h
+	if orientation >= 5 { // 5..8 transpose the axes
+		dw, dh = h, w
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, dw, dh))
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			var dx, dy int
+			switch orientation {
+			case 2: // mirror horizontal
+				dx, dy = w-1-x, y
+			case 3: // rotate 180
+				dx, dy = w-1-x, h-1-y
+			case 4: // mirror vertical
+				dx, dy = x, h-1-y
+			case 5: // transpose
+				dx, dy = y, x
+			case 6: // rotate 90 clockwise
+				dx, dy = h-1-y, x
+			case 7: // transverse
+				dx, dy = h-1-y, w-1-x
+			case 8: // rotate 270 clockwise
+				dx, dy = y, w-1-x
+			}
+			dst.Set(dx, dy, src.At(b.Min.X+x, b.Min.Y+y))
+		}
+	}
+	return dst
 }
 
 // boxScale is a small area-average resizer. Bilinear would be prettier; this

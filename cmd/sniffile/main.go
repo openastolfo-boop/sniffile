@@ -26,7 +26,7 @@ import (
 	"github.com/openastolfo-boop/sniffile/internal/server"
 )
 
-var version = "0.3.0"
+var version = "0.10"
 
 func main() {
 	log.SetFlags(log.Ltime)

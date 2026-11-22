@@ -26,6 +26,13 @@
   </developer>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10" date="2026-11-22">
+      <description>
+        <p>First tagged release. Phone photos are rotated from EXIF, Windows
+        reveal selects the file in Explorer, and path checks are
+        case-insensitive on Windows.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-15">
       <description>
         <p>Native desktop packaging for Linux and Windows, faster startup, Wayland fix.</p>

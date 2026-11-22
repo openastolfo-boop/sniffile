@@ -1,3 +1,14 @@
+sniffile (0.10-1) unstable; urgency=medium
+
+  * First tagged release: v0.10.
+  * Phone photos now respect their EXIF orientation, so portrait shots no
+    longer appear sideways in the preview.
+  * Windows: reveal selects the file in Explorer, path checks are
+    case-insensitive, and the build script uses the matching g++.
+  * Windows desktop window and NSIS installer included in the release.
+
+ -- openastolfo-boop <openastolfo-boop@users.noreply.github.com>  Sun, 22 Nov 2026 12:00:00 +0000
+
 sniffile (0.3.0-1) unstable; urgency=medium
 
   * Native desktop window is now the default on Linux and Windows.

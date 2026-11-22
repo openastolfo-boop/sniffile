@@ -1,6 +1,6 @@
 BIN     := sniffile
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//')
-VERSION := $(if $(strip $(VERSION)),$(VERSION),0.3.0)
+VERSION := $(if $(strip $(VERSION)),$(VERSION),0.10)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 TAGS    ?=
 PREFIX  ?= /usr/local

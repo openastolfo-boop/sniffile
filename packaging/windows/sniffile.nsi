@@ -1,9 +1,9 @@
 ; Sniffile installer for Windows 10/11 (NSIS 3, Unicode).
-; Build: makensis -DVERSION=0.3.0 -DOUTDIR=dist packaging/windows/sniffile.nsi
+; Build: makensis -DVERSION=0.10 -DOUTDIR=dist packaging/windows/sniffile.nsi
 Unicode true
 
 !ifndef VERSION
-  !define VERSION "0.3.0"
+  !define VERSION "0.10"
 !endif
 !ifndef OUTDIR
   !define OUTDIR "dist"

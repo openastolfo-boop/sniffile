@@ -1,6 +1,6 @@
 # Build with packaging/scripts/package-rpm.sh, or:
 #   rpmbuild -bb packaging/rpm/sniffile.spec \
-#     --define "_version 0.3.0" --define "_sourcedir $PWD/bin"
+#     --define "_version 0.10" --define "_sourcedir $PWD/bin"
 Name:           sniffile
 Version:        %{_version}
 Release:        1%{?dist}
@@ -44,5 +44,8 @@ install -Dm644 %{_sourcedir}/LICENSE %{buildroot}%{_licensedir}/sniffile/LICENSE
 %{_licensedir}/sniffile/LICENSE
 
 %changelog
+* Sun Nov 22 2026 openastolfo-boop <openastolfo-boop@users.noreply.github.com> - 0.10
+- First tagged release. EXIF photo rotation, Windows Explorer reveal and
+  case-insensitive path handling.
 * Sun Nov 15 2026 openastolfo-boop <openastolfo-boop@users.noreply.github.com> - 0.3.0
 - Native desktop window, Wayland crash fix, Linux and Windows packaging.

@@ -7,9 +7,9 @@
 set -eu
 
 cd "$(dirname "$0")/.."
-VERSION=${VERSION:-$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo 0.3.0)}
+VERSION=${VERSION:-$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo 0.10)}
 VERSION=${VERSION#v}
-VERSION=${VERSION:-0.3.0}
+VERSION=${VERSION:-0.10}
 ARCH=${ARCH:-amd64}
 OUT=${OUT:-dist}
 mkdir -p "$OUT"
@@ -31,8 +31,17 @@ if [ -z "$CC_BIN" ]; then
 	esac
 fi
 
-echo "building Windows $ARCH with $CC_BIN"
-CGO_ENABLED=1 GOOS=windows GOARCH="$ARCH" CC="$CC_BIN" \
+# cgo compiles the WebView2 glue as C++, so the matching g++ matters.
+CXX_BIN=${CXX:-}
+if [ -z "$CXX_BIN" ]; then
+	case "$CC_BIN" in
+		*gcc) CXX_BIN="${CC_BIN%gcc}g++" ;;
+		*)    CXX_BIN="$CC_BIN" ;;
+	esac
+fi
+
+echo "building Windows $ARCH with $CC_BIN / $CXX_BIN"
+CGO_ENABLED=1 GOOS=windows GOARCH="$ARCH" CC="$CC_BIN" CXX="$CXX_BIN" \
 	${GO:-go} build -trimpath \
 	-ldflags "-s -w -H windowsgui -X main.version=$VERSION" \
 	-o "$OUT/sniffile.exe" ./cmd/sniffile

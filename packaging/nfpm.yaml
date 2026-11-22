@@ -1,5 +1,5 @@
 # nfpm builds .deb, .rpm and .apk packages from an already-built binary.
-#   VERSION=0.3.0 GOARCH=amd64 nfpm package -f packaging/nfpm.yaml -p deb
+#   VERSION=0.10 GOARCH=amd64 nfpm package -f packaging/nfpm.yaml -p deb
 # See scripts/package-unix.sh.
 name: sniffile
 arch: ${GOARCH}

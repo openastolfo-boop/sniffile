@@ -1,6 +1,6 @@
 # Maintainer: openastolfo-boop <openastolfo-boop@users.noreply.github.com>
 pkgname=sniffile
-pkgver=0.3.0
+pkgver=0.10
 pkgrel=1
 pkgdesc="Fast local file search that never leaves your machine"
 arch=('x86_64' 'aarch64')

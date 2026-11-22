@@ -16,7 +16,8 @@ Type what you remember — `photo with a pug`, `invoice march`,
 - Understands Russian and English queries through a small hand-written
   thesaurus (мопс → pug, фотка → photo, машина → car, …).
 - Survives typos with a one-edit fuzzy fallback.
-- Shows grayscale thumbnails, opens files in your default app, reveals folders.
+- Shows grayscale thumbnails, auto-rotates phone photos from their EXIF
+  orientation, opens files in your default app, reveals folders.
 - Optionally uses a **local** [ollama](https://ollama.com) instance for query
   keywords and for one-line photo captions. Nothing leaves the machine.
 
@@ -194,8 +195,8 @@ ollama is enabled. There is no telemetry, no update check, no account.
 - Keyword matching, not semantic embeddings. A photo is findable by name or
   caption, not by what a neural net thinks it looks like — unless you add ollama.
 - PDF, DOCX, EPUB contents are not parsed. Only plain text and source code.
-- EXIF orientation is ignored, so some phone photos may look sideways in the
-  preview.
+- EXIF orientation is applied to thumbnails, but HEIC/AVIF/RAW previews are
+  not decoded. Those files are still searchable by name.
 - No OCR. Text inside screenshots is not indexed.
 - Files over 64 MB are skipped by default.
 - Chinese/Japanese text is tokenized as one long word. Works poorly. PRs welcome.

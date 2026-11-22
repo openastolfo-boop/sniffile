@@ -3,9 +3,9 @@
 set -eu
 
 cd "$(dirname "$0")/.."
-VERSION=${VERSION:-$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo 0.3.0)}
+VERSION=${VERSION:-$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo 0.10)}
 VERSION=${VERSION#v}
-VERSION=${VERSION:-0.3.0}
+VERSION=${VERSION:-0.10}
 ARCH=${ARCH:-$(go env GOARCH)}
 OUT=${OUT:-dist}
 
